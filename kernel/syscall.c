@@ -171,6 +171,12 @@ syscall(void)
 
     
     uint64 arg0 = p->trapframe->a0; // Save first argument BEFORE syscall dispatch
+    
+    // For exec, we need to capture the path string BEFORE the syscall executes
+    char exec_path[32];
+    if (num == SYS_exec && p->traced) {
+      fetchstr(arg0, exec_path, sizeof(exec_path));
+    }
 
     p->trapframe->a0 = syscalls[num](); // Use num to lookup the system call function for num, call it, and store its return value in p->trapframe->a0
 
@@ -183,23 +189,21 @@ syscall(void)
           num == SYS_chdir || num == SYS_mkdir || num == SYS_link
           /* ignore the second string argument of `link` */)
       {
-        // String arguments (for open, chdir, mkdir, unlink, link): Print as “string”
+        // String arguments (for open, chdir, mkdir, unlink, link): Print as "string"
         char pathname[32];
         fetchstr(arg0, pathname, sizeof(pathname));
-        printf("[pid %d] %s(\"%s\") = %ld\n", p->pid, syscall_names[num], pathname, p->trapframe->a0);
+        printf("[pid %d] %s(\"%s\") = %d\n", p->pid, syscall_names[num], pathname, (int)p->trapframe->a0);
       }
       else if ( num == SYS_exec ){
          // If the syscall is exec... 
-         // Print the program name from argv[0] as “program” (When we run ls, the output should be exec(“ls”))
-          char progname[32];
-          fetchstr(arg0, progname, sizeof(progname));
-          printf("[pid %d] %s(\"%s\") = %ld\n", p->pid, syscall_names[num], progname, p->trapframe->a0);
+         // Print the program name captured BEFORE exec ran
+          printf("[pid %d] %s(\"%s\") = %d\n", p->pid, syscall_names[num], exec_path, (int)p->trapframe->a0);
       }
       else
       {
          // If the syscall is any of the others...
          // Print first argument as integer
-          printf("[pid %d] %s(%ld) = %ld\n", p->pid, syscall_names[num], arg0, p->trapframe->a0);
+          printf("[pid %d] %s(%d) = %d\n", p->pid, syscall_names[num], (int)arg0, (int)p->trapframe->a0);
       }
     }
   }

@@ -99,12 +99,6 @@ sys_trace(void)
   int pid;
   argint(0, &pid);
 
-  if (pid == 0) {
-    // Trace the current process
-    myproc()->traced = 0xFFFFFFFF;
-    return 0;
-  }
-
   struct proc *p = find_proc_by_pid(pid);
   if (p != NULL){
       // The process with the specified PID exists, Set the tracing flag for matching process
