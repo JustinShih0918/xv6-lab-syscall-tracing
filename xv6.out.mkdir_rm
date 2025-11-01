@@ -1,0 +1,13 @@
+
+xv6 kernel is booting
+
+hart 1 starting
+hart 2 starting
+init: starting sh
+$ strace mkdir nNTDVfht
+[pid 4] exec("nNTDVfht") = 2
+[pid 4] mkdir("nNTDVfht") = 0
+$ strace rm nNTDVfht
+[pid 6] exec("nNTDVfht") = 2
+[pid 6] unlink("nNTDVfht") = 0
+$ qemu-system-riscv64: terminating on signal 15 from pid 28976 (make)

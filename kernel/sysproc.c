@@ -5,6 +5,7 @@
 #include "memlayout.h"
 #include "spinlock.h"
 #include "proc.h"
+#include <stddef.h>
 
 uint64
 sys_exit(void)
@@ -90,6 +91,30 @@ sys_uptime(void)
   xticks = ticks;
   release(&tickslock);
   return xticks;
+}
+
+uint64
+sys_trace(void)
+{
+  int pid;
+  argint(0, &pid);
+
+  if (pid == 0) {
+    // Trace the current process
+    myproc()->traced = 0xFFFFFFFF;
+    return 0;
+  }
+
+  struct proc *p = find_proc_by_pid(pid);
+  if (p != NULL){
+      // The process with the specified PID exists, Set the tracing flag for matching process
+      p->traced = 0xFFFFFFFF; // Trace all system calls
+      release(&p->lock);
+      return 0;
+  }
+  else {
+      return -1; // No process with the specified PID found
+  }
 }
 
 

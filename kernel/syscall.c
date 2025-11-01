@@ -7,6 +7,31 @@
 #include "syscall.h"
 #include "defs.h"
 
+// static array mapping syscall numbers to name strings
+static char *syscall_names[] = {
+  [SYS_fork]    "fork",
+  [SYS_exit]    "exit",
+  [SYS_wait]    "wait",
+  [SYS_pipe]    "pipe",
+  [SYS_read]    "read",
+  [SYS_kill]    "kill",
+  [SYS_exec]    "exec",
+  [SYS_fstat]   "fstat",
+  [SYS_chdir]   "chdir",
+  [SYS_dup]     "dup",
+  [SYS_getpid]  "getpid",
+  [SYS_sbrk]    "sbrk",
+  [SYS_sleep]   "sleep",
+  [SYS_uptime]  "uptime",
+  [SYS_open]    "open",
+  [SYS_write]   "write",
+  [SYS_mknod]   "mknod",
+  [SYS_unlink]  "unlink",
+  [SYS_link]    "link",
+  [SYS_mkdir]   "mkdir",
+  [SYS_close]   "close",
+  [SYS_trace]   "trace"
+};
 
 // Fetch the uint64 at addr from the current process.
 int
@@ -102,6 +127,7 @@ extern uint64 sys_unlink(void);
 extern uint64 sys_link(void);
 extern uint64 sys_mkdir(void);
 extern uint64 sys_close(void);
+extern uint64 sys_trace(void);
 
 // An array mapping syscall numbers from syscall.h
 // to the function that handles the system call.
@@ -127,6 +153,7 @@ static uint64 (*syscalls[])(void) = {
 [SYS_link]    sys_link,
 [SYS_mkdir]   sys_mkdir,
 [SYS_close]   sys_close,
+[SYS_trace]   sys_trace
 };
 
 
@@ -138,15 +165,48 @@ syscall(void)
 {
   int num;
   struct proc *p = myproc();
-
   num = p->trapframe->a7;
-  if(num > 0 && num < NELEM(syscalls) && syscalls[num]) {
-    // Use num to lookup the system call function for num, call it,
-    // and store its return value in p->trapframe->a0
-    p->trapframe->a0 = syscalls[num]();
-  } else {
+  if (num > 0 && num < NELEM(syscalls) && syscalls[num])
+  {
+
+    
+    uint64 arg0 = p->trapframe->a0; // Save first argument BEFORE syscall dispatch
+
+    p->trapframe->a0 = syscalls[num](); // Use num to lookup the system call function for num, call it, and store its return value in p->trapframe->a0
+
+
+    if (p->traced)
+    {
+
+      // Print syscall name, first argument
+      if (num == SYS_open || num == SYS_unlink ||  
+          num == SYS_chdir || num == SYS_mkdir || num == SYS_link
+          /* ignore the second string argument of `link` */)
+      {
+        // String arguments (for open, chdir, mkdir, unlink, link): Print as “string”
+        char pathname[32];
+        fetchstr(arg0, pathname, sizeof(pathname));
+        printf("[pid %d] %s(\"%s\") = %ld\n", p->pid, syscall_names[num], pathname, p->trapframe->a0);
+      }
+      else if ( num == SYS_exec ){
+         // If the syscall is exec... 
+         // Print the program name from argv[0] as “program” (When we run ls, the output should be exec(“ls”))
+          char progname[32];
+          fetchstr(arg0, progname, sizeof(progname));
+          printf("[pid %d] %s(\"%s\") = %ld\n", p->pid, syscall_names[num], progname, p->trapframe->a0);
+      }
+      else
+      {
+         // If the syscall is any of the others...
+         // Print first argument as integer
+          printf("[pid %d] %s(%ld) = %ld\n", p->pid, syscall_names[num], arg0, p->trapframe->a0);
+      }
+    }
+  }
+  else
+  {
     printf("%d %s: unknown sys call %d\n",
-            p->pid, p->name, num);
+           p->pid, p->name, num);
     p->trapframe->a0 = -1;
   }
 }

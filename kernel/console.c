@@ -60,6 +60,12 @@ consolewrite(int user_src, uint64 src, int n)
 {
   int i;
 
+  // If the current process is being traced, drop the output
+  // to avoid interleaving with trace messages
+  struct proc *p = myproc();
+  if(p && p->traced){
+    return n; // Pretend we wrote all bytes, but actually skip the output
+  }
 
   for(i = 0; i < n; i++){
     char c;

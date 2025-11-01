@@ -5,6 +5,7 @@
 #include "spinlock.h"
 #include "proc.h"
 #include "defs.h"
+#include <stddef.h>
 
 struct cpu cpus[NCPU];
 
@@ -693,6 +694,20 @@ procdump(void)
     printf("%d %s %s", p->pid, state, p->name);
     printf("\n");
   }
+}
+
+struct proc* find_proc_by_pid(int pid) {
+  struct proc* now_proc;
+  // Search through the process table
+  for(now_proc = proc; now_proc < &proc[NPROC]; now_proc++) {
+    acquire(&now_proc->lock);
+    if(now_proc->pid == pid) {
+      // Found the process, keep the lock held and return
+      return now_proc;
+    }
+    release(&now_proc->lock);
+  }
+  return NULL;
 }
 
 
